@@ -1,0 +1,170 @@
+﻿<canvas id=a width=600 height=600></canvas>
+
+<script>
+c=a.getContext`2d`;
+x_min = -1;
+x_max = 1;
+y_min = -1;
+y_max = 1;
+Nx = 100;
+Ny = Nx;
+NT = 1000;
+T_max = 2;
+dx = (x_max - x_min) / (Nx - 1);
+dy = (y_max - y_min) / (Ny - 1);
+X = [];
+Y = [];
+Z0 = [];
+
+for(i = 0; i < Nx; i++){
+  X[i] = [];
+  Y[i] = [];
+  Z0[i] = [];
+  for(j = 0; j < Ny; j++){
+    X[i][j] = x_min + j * dx;
+    Y[i][j] = y_min + i * dy;
+    Z0[i][j] = 10 * Math.exp(-10 * X[i][j] ** 2) * Math.exp(-10 * Y[i][j] ** 2);
+  }
+}
+
+P = Z0;
+w = 0;
+setInterval(e=>{
+  a.width ^= 0;
+  w += .01;
+  for(i = 0; i < Nx; i++){
+    for(j = 0; j < Ny; j++){
+      x = i*100; //X * 5 - 180;
+      y = j*100; //Y * 5 - 180;
+      z = P[i][j];
+      p=Math.atan2(y,x)-w;
+      d=Math.hypot(y,x);
+      x=Math.sin(p)*d;
+      y=Math.cos(p)*d;
+      p=Math.atan2(y,z)+1;
+      d=Math.hypot(y,z);
+      z=Math.sin(p)*d;
+      y=Math.cos(p)*d;
+      y+=250;
+      c.moveTo(P[i][j][0], P[i][j][1]);
+      try{c.lineTo(P[i][j+1][0], P[i][j+1][1])}catch(e){};
+      c.moveTo(P[i][j][0], P[i][j][1]);
+      try{c.lineTo(P[i+1][j][0], P[i+1][j][1])}catch(e){};
+    }
+  }
+  c.stroke();
+}, 33);
+
+
+
+/*
+
+def compute_wave_solution(Z0):
+    Z0 = set_boundary_conditions(Z0)
+    Z = np.zeros((NT, Nx, Ny))
+
+    Z[0, :, :] = Z0
+    Z[1, :, :] = Z0  # initial velocity = 0
+
+    for t in range(1, NT-1):
+        Z[t+1, 1:-1, 1:-1] = (dt ** 2) * (0.5 * L(Z[t, :, :]) + 0.5 * L(Z[t-1, :, :])) + 2 * Z[t, 1:-1, 1:-1] - Z[t-1, 1:-1, 1:-1]
+        Z[t+1, :, :] = set_boundary_conditions(Z[t+1, :, :])
+
+    return Z
+    
+    
+*/
+
+
+</script>
+
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
+
+def plot_simualtion(X, Y, Z):
+    fig = plt.figure()
+
+    for t in range(NT):
+        ax = fig.gca(projection='3d')
+        # Customize the z axis.
+        ax.set_zlim(0, 10)
+        ax.zaxis.set_major_locator(LinearLocator(10))
+        ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+
+        ax.plot_surface(X, Y, Z[t, :, :], cmap=cm.coolwarm, linewidth=0, antialiased=False)
+        plt.pause(0.01)
+        plt.clf()
+
+    plt.show()
+
+def t_x_p(Zt):
+    return Zt[1:-1, 2:]
+
+def t_y_p(Zt):
+    return Zt[2:, 1:-1]
+
+def t_x_m(Zt):
+    return Zt[1:-1, :-2]
+
+def t_y_m(Zt):
+    return Zt[:-2, 1:-1]
+
+def L(Zt):
+    Lx = 1/dx**2 * (t_x_p(Zt) - 2 * Zt[1:-1, 1:-1] + t_x_m(Zt))
+    Ly = 1/dy**2 * (t_y_p(Zt) - 2 * Zt[1:-1, 1:-1] + t_y_m(Zt))
+    return Lx + Ly
+
+def set_boundary_conditions(Z):
+    Z[:,0] = Z[:,1]
+    Z[:,-1] = Z[:,-2]
+    Z[0,:] = Z[1,:]
+    Z[-1,:] = Z[-2,:]
+    return Z
+
+def compute_wave_solution(Z0):
+    Z0 = set_boundary_conditions(Z0)
+    Z = np.zeros((NT, Nx, Ny))
+
+    Z[0, :, :] = Z0
+    Z[1, :, :] = Z0  # initial velocity = 0
+
+    for t in range(1, NT-1):
+        Z[t+1, 1:-1, 1:-1] = (dt ** 2) * (0.5 * L(Z[t, :, :]) + 0.5 * L(Z[t-1, :, :])) + 2 * Z[t, 1:-1, 1:-1] - Z[t-1, 1:-1, 1:-1]
+        Z[t+1, :, :] = set_boundary_conditions(Z[t+1, :, :])
+
+    return Z
+
+x_min = -1
+x_max = 1
+y_min = -1
+y_max = 1
+Nx = 100
+Ny = Nx
+NT = 1000
+T_max = 2
+
+
+# Uniform discretization w.r.t x
+x = np.linspace(x_min, x_max, Nx)
+dx = x[1] - x[0]
+
+# Uniform discretization w.r.t y
+y = np.linspace(y_min, y_max, Ny)
+dy = y[1] - y[0]
+
+# Uniform discretization w.r.t time
+dt = T_max / NT
+
+# mesh x and y
+X, Y = np.meshgrid(x, y)
+
+Z0 = 10 * np.exp(- 10*X ** 2) * np.exp(- 10* Y ** 2)
+
+Z = compute_wave_solution(Z0)
+
+plot_simualtion(X, Y, Z)
