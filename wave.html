@@ -1,7 +1,9 @@
-﻿<canvas id=a width=600 height=600></canvas>
+﻿<canvas id=a width=800 height=600></canvas>
 
 <script>
-c=a.getContext`2d`;
+
+// Init
+c=a.getContext('2d');
 x_min = -1;
 x_max = 1;
 y_min = -1;
@@ -16,6 +18,7 @@ X = [];
 Y = [];
 Z0 = [];
 
+// Compute Z0
 for(i = 0; i < Nx; i++){
   X[i] = [];
   Y[i] = [];
@@ -27,16 +30,18 @@ for(i = 0; i < Nx; i++){
   }
 }
 
-P = Z0;
+// Loop
+P = [];
 w = 0;
 setInterval(e=>{
   a.width ^= 0;
   w += .01;
-  for(i = 0; i < Nx; i++){
-    for(j = 0; j < Ny; j++){
-      x = i*100; //X * 5 - 180;
-      y = j*100; //Y * 5 - 180;
-      z = P[i][j];
+  for(X = 99; X--;){
+    P[X] = [];
+    for(Y = 99; Y--;){
+      x = X * 4 - 200;
+      y = Y * 4 - 200;
+      z = -Z0[X][Y]*10;
       p=Math.atan2(y,x)-w;
       d=Math.hypot(y,x);
       x=Math.sin(p)*d;
@@ -45,11 +50,12 @@ setInterval(e=>{
       d=Math.hypot(y,z);
       z=Math.sin(p)*d;
       y=Math.cos(p)*d;
-      y+=250;
-      c.moveTo(P[i][j][0], P[i][j][1]);
-      try{c.lineTo(P[i][j+1][0], P[i][j+1][1])}catch(e){};
-      c.moveTo(P[i][j][0], P[i][j][1]);
-      try{c.lineTo(P[i+1][j][0], P[i+1][j][1])}catch(e){};
+      y+=400;
+      P[X][Y] = [400+x/y*400, 400+z/y*400];
+      c.moveTo(P[X][Y][0], P[X][Y][1]-100);
+      try{c.lineTo(P[X][Y+1][0], P[X][Y+1][1]-100)}catch(e){};
+      c.moveTo(P[X][Y][0], P[X][Y][1]-100);
+      try{c.lineTo(P[X+1][Y][0], P[X+1][Y][1]-100)}catch(e){};
     }
   }
   c.stroke();
@@ -80,6 +86,7 @@ def compute_wave_solution(Z0):
 
 
 
+<!--
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -167,4 +174,4 @@ Z0 = 10 * np.exp(- 10*X ** 2) * np.exp(- 10* Y ** 2)
 
 Z = compute_wave_solution(Z0)
 
-plot_simualtion(X, Y, Z)
+plot_simualtion(X, Y, Z)-->
