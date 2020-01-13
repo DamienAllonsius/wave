@@ -35,7 +35,7 @@ P = [];
 w = 0;
 setInterval(e=>{
   a.width ^= 0;
-  w += .01;
+  //w += .01;
   for(X = 99; X--;){
     P[X] = [];
     for(Y = 99; Y--;){
@@ -46,7 +46,7 @@ setInterval(e=>{
       d=Math.hypot(y,x);
       x=Math.sin(p)*d;
       y=Math.cos(p)*d;
-      p=Math.atan2(y,z)+1;
+      p=Math.atan2(y,z)+1.2;
       d=Math.hypot(y,z);
       z=Math.sin(p)*d;
       y=Math.cos(p)*d;
@@ -63,23 +63,94 @@ setInterval(e=>{
 
 
 
+t_x_p = Zt => {
+  var ret;
+  for(var i = 1; i < Nx - 1; i++){
+    for(var j = 2; j < Ny; j++){
+      ret[i-1][j-2] = Zt[i][j];
+    }
+  }
+  return ret;
+}
+
+t_y_p = Zt => {
+  var ret;
+  for(var i = 2; i < Nx; i++){
+    for(var j = 1; j < Ny - 1; j++){
+      ret[i-2][j-1] = Zt[i][j];
+    }
+  }
+  return ret;
+}
+
+
+t_x_m = Zt => {
+  var ret;
+  for(var i = 1; i < Nx - 1; i++){
+    for(var j = 0; j < Ny - 2; j++){
+      ret[i-1][j] = Zt[i][j];
+    }
+  }
+  return ret;
+}
+
+
+t_y_m = Zt => {
+  var ret;
+  for(var i = 0; i < Nx - 2; i++){
+    for(var j = 1; j < Ny - 1; j++){
+      ret[i][j-1] = Zt[i][j];
+    }
+  }
+  return ret;
+}
+
+L = Zt => {
+    Lx = 1/dx**2 * (t_x_p(Zt) - 2 * Zt[1:-1, 1:-1] + t_x_m(Zt))
+    Ly = 1/dy**2 * (t_y_p(Zt) - 2 * Zt[1:-1, 1:-1] + t_y_m(Zt))
+    return Lx + Ly
+}
+
 /*
 
-def compute_wave_solution(Z0):
-    Z0 = set_boundary_conditions(Z0)
-    Z = np.zeros((NT, Nx, Ny))
-
-    Z[0, :, :] = Z0
-    Z[1, :, :] = Z0  # initial velocity = 0
-
-    for t in range(1, NT-1):
-        Z[t+1, 1:-1, 1:-1] = (dt ** 2) * (0.5 * L(Z[t, :, :]) + 0.5 * L(Z[t-1, :, :])) + 2 * Z[t, 1:-1, 1:-1] - Z[t-1, 1:-1, 1:-1]
-        Z[t+1, :, :] = set_boundary_conditions(Z[t+1, :, :])
-
+def set_boundary_conditions(Z):
+    Z[:,0] = Z[:,1]
+    Z[:,-1] = Z[:,-2]
+    Z[0,:] = Z[1,:]
+    Z[-1,:] = Z[-2,:]
     return Z
+
+    */
     
-    
-*/
+
+
+compute_wave_solution = Z0 => {
+  Z0 = set_boundary_conditions(Z0);
+  Z = [];
+  for(var i = 0; i < NT; i++){
+    Z[i] = [];
+    for(var j = 0; j < NT; j++){
+      Z[i][j] = [];
+      for(var k = 0; k < NT; k++){
+        Z[i][j][k] = 0;
+      }
+    }
+  }
+
+  Z[0] = Z0;
+  
+  Z[1] = Z0;
+
+  for(var t = 1; t < NT - 1; t++){
+  
+  
+    //Z[t+1, 1:-1, 1:-1] = (dt ** 2) * (0.5 * L(Z[t, :, :]) + 0.5 * L(Z[t-1, :, :])) + 2 * Z[t, 1:-1, 1:-1] - Z[t-1, 1:-1, 1:-1]
+    //Z[t+1, :, :] = set_boundary_conditions(Z[t+1, :, :])
+  }
+  
+  return Z;
+}
+
 
 
 </script>
@@ -109,29 +180,8 @@ def plot_simualtion(X, Y, Z):
 
     plt.show()
 
-def t_x_p(Zt):
-    return Zt[1:-1, 2:]
 
-def t_y_p(Zt):
-    return Zt[2:, 1:-1]
 
-def t_x_m(Zt):
-    return Zt[1:-1, :-2]
-
-def t_y_m(Zt):
-    return Zt[:-2, 1:-1]
-
-def L(Zt):
-    Lx = 1/dx**2 * (t_x_p(Zt) - 2 * Zt[1:-1, 1:-1] + t_x_m(Zt))
-    Ly = 1/dy**2 * (t_y_p(Zt) - 2 * Zt[1:-1, 1:-1] + t_y_m(Zt))
-    return Lx + Ly
-
-def set_boundary_conditions(Z):
-    Z[:,0] = Z[:,1]
-    Z[:,-1] = Z[:,-2]
-    Z[0,:] = Z[1,:]
-    Z[-1,:] = Z[-2,:]
-    return Z
 
 def compute_wave_solution(Z0):
     Z0 = set_boundary_conditions(Z0)
