@@ -9,13 +9,15 @@ x_max = 1;
 y_min = -1;
 y_max = 1;
 Nx = 100;
-Ny = Nx;
-NT = 1000;
+Ny = 100;
 T_max = 2;
+NT = T_max * 1500;
 dx = (x_max - x_min) / (Nx - 1);
 dy = (y_max - y_min) / (Ny - 1);
+dt = T_max / NT;
 X = [];
 Y = [];
+Z = [];
 Z0 = [];
 
 // Compute Z0
@@ -24,62 +26,206 @@ for(i = 0; i < Nx; i++){
   Y[i] = [];
   Z0[i] = [];
   for(j = 0; j < Ny; j++){
-    X[i][j] = x_min + j * dx;
-    Y[i][j] = y_min + i * dy;
-    Z0[i][j] = 10 * Math.exp(-10 * X[i][j] ** 2) * Math.exp(-10 * Y[i][j] ** 2);
+    X[i][j] = x_min + i * dx;
+    Y[i][j] = y_min + j * dy;
+    Z0[i][j] = 10 * Math.exp(-10 * (X[i][j] - 1/2) ** 2) * Math.exp(-10 * (Y[i][j] - 1/2) ** 2);
   }
 }
+
+t_x_y = Zt => {
+  var ret = [];
+  for(var i = 1; i < Nx - 1; i++){
+    ret[i-1] = [];
+    for(var j = 1; j < Ny - 1; j++){
+      ret[i-1][j-1] = Zt[i][j];
+    }
+  }
+  return ret;
+}
+
+
+t_x_p = Zt => {
+  var ret = [];
+  for(var i = 1; i < Nx - 1; i++){
+     ret[i-1] = [];
+    for(var j = 2; j < Ny; j++){
+      ret[i-1][j-2] = Zt[i][j];
+    }
+  }
+  return ret;
+}
+
+t_y_p = Zt => {
+  var ret = [];
+  for(var i = 2; i < Nx; i++){
+     ret[i-2] = [];
+    for(var j = 1; j < Ny - 1; j++){
+      ret[i-2][j-1] = Zt[i][j];
+    }
+  }
+  return ret;
+}
+
+
+t_x_m = Zt => {
+  var ret = [];
+  for(var i = 1; i < Nx - 1; i++){
+    ret[i-1] = [];
+    for(var j = 0; j < Ny - 2; j++){
+      ret[i-1][j] = Zt[i][j];
+    }
+  }
+  return ret;
+}
+
+
+t_y_m = Zt => {
+  var ret = [];
+  for(var i = 0; i < Nx - 2; i++){
+    ret[i] = [];
+    for(var j = 1; j < Ny - 1; j++){
+      ret[i][j-1] = Zt[i][j];
+    }
+  }
+  return ret;
+}
+
+add_mat_mat = (a, b) => {
+  var ret = [];
+  for(var i = 0; i < a.length; i++){
+    ret[i] = [];
+    for(var j = 0; j < a[i].length;  j++){
+      ret[i][j] = a[i][j] + b[i][j];
+    }
+  }
+  return ret;
+}
+
+sub_mat_mat = (a, b) => {
+  var ret = [];
+  for(var i = 0; i < a.length; i++){
+    ret[i] = [];
+    for(var j = 0; j < a[i].length;  j++){
+      ret[i][j] = a[i][j] - b[i][j];
+    }
+  }
+  return ret;
+}
+
+mul_mat_n = (a, n) => {
+  var ret = [];
+  for(var i = 0; i < a.length; i++){
+    ret[i] = [];
+    for(var j = 0; j < a[i].length;  j++){
+      ret[i][j] = a[i][j] * n;
+    }
+  }
+  return ret;
+}
+
+
+L = Zt => {
+    
+    var Lx = mul_mat_n(add_mat_mat(add_mat_mat(t_x_p(Zt), mul_mat_n(t_x_y(Zt), -2)), t_x_m(Zt)), 1/dx**2);
+    
+    var Ly = mul_mat_n(add_mat_mat(add_mat_mat(t_y_p(Zt), mul_mat_n(t_x_y(Zt), -2)), t_y_m(Zt)), 1/dy**2);
+    
+    return add_mat_mat(Lx, Ly);
+}
+
+// Zt tableau de taille Ny dont les éléments sont de taille Nx
+set_boundary_conditions = Zt => {
+    for (var j=0; j<Nx; j++) {
+        Zt[0][j] = Zt[1][j];
+        Zt[Ny-1][j] = Zt[Ny-2][j];
+    }
+    
+    for (var i=0; i<Ny; i++) {
+        Zt[i][0] = Zt[i][1];
+        Zt[i][Nx-1] = Zt[i][Nx-2];
+    }
+    
+    return Zt;
+}
+    
+
+compute_wave_solution = Z0 => {
+  Z0 = set_boundary_conditions(Z0);
+  for(var i = 0; i < NT; i++){
+    Z[i] = [];
+    for(var j = 0; j < Nx; j++){
+      Z[i][j] = [];
+      for(var k = 0; k < Ny; k++){
+        Z[i][j][k] = 0;
+      }
+    }
+  }
+
+  Z[0] = Z0;
+  
+  Z[1] = Z0;
+
+  for(var t = 1; t < NT - 1; t++){
+    
+    var lapl_Z = mul_mat_n(add_mat_mat(mul_mat_n(L(Z[t]), 0.5), mul_mat_n(L(Z[t-1]), 0.5)), dt**2);
+    
+    var Z_int = add_mat_mat(lapl_Z, sub_mat_mat(mul_mat_n(t_x_y(Z[t]), 2), t_x_y(Z[t-1])));
+    
+    // Z[t+1] = []; 
+    
+    for(var i=1; i<Ny-1; i++){
+      // Z[t+1][i] = [];
+      for(var j=1; j<Nx-1; j++){
+        Z[t+1][i][j] = Z_int[i-1][j-1];
+      }
+    }
+    //console.log(Z[t+1]);
+    Z[t+1] = set_boundary_conditions(Z[t+1])
+  }
+  /*
+ */
+}
+
+compute_wave_solution(Z0);
+
 
 // Loop
 P = [];
 w = 0;
+frame = 0;
+
 setInterval(e=>{
   a.width ^= 0;
-  w += .01;
+  if(frame < NT - 4) frame+=4;
+  //w += .005;
+  document.title = "" + frame + " " + X + " " + Y + " ";
   for(X = 99; X--;){
     P[X] = [];
     for(Y = 99; Y--;){
       x = X * 4 - 200;
       y = Y * 4 - 200;
-      z = -Z0[X][Y]*10;
+      if(frame == 998){
+        console.log(X, Y);
+      }
+      z = -Z[frame][X][Y]*10;
       p=Math.atan2(y,x)-w;
       d=Math.hypot(y,x);
       x=Math.sin(p)*d;
       y=Math.cos(p)*d;
-      p=Math.atan2(y,z)+1;
+      p=Math.atan2(y,z)+0.9;
       d=Math.hypot(y,z);
       z=Math.sin(p)*d;
       y=Math.cos(p)*d;
       y+=400;
       P[X][Y] = [400+x/y*400, 400+z/y*400];
-      c.moveTo(P[X][Y][0], P[X][Y][1]-100);
-      try{c.lineTo(P[X][Y+1][0], P[X][Y+1][1]-100)}catch(e){};
-      c.moveTo(P[X][Y][0], P[X][Y][1]-100);
-      try{c.lineTo(P[X+1][Y][0], P[X+1][Y][1]-100)}catch(e){};
+      c.moveTo(P[X][Y][0], P[X][Y][1]-200);
+      try{c.lineTo(P[X][Y+1][0], P[X][Y+1][1]-200)}catch(e){};
+      c.moveTo(P[X][Y][0], P[X][Y][1]-200);
+      try{c.lineTo(P[X+1][Y][0], P[X+1][Y][1]-200)}catch(e){};
     }
   }
   c.stroke();
-}, 33);
-
-
-
-/*
-
-def compute_wave_solution(Z0):
-    Z0 = set_boundary_conditions(Z0)
-    Z = np.zeros((NT, Nx, Ny))
-
-    Z[0, :, :] = Z0
-    Z[1, :, :] = Z0  # initial velocity = 0
-
-    for t in range(1, NT-1):
-        Z[t+1, 1:-1, 1:-1] = (dt ** 2) * (0.5 * L(Z[t, :, :]) + 0.5 * L(Z[t-1, :, :])) + 2 * Z[t, 1:-1, 1:-1] - Z[t-1, 1:-1, 1:-1]
-        Z[t+1, :, :] = set_boundary_conditions(Z[t+1, :, :])
-
-    return Z
-    
-    
-*/
+}, 16);
 
 
 </script>
@@ -109,29 +255,8 @@ def plot_simualtion(X, Y, Z):
 
     plt.show()
 
-def t_x_p(Zt):
-    return Zt[1:-1, 2:]
 
-def t_y_p(Zt):
-    return Zt[2:, 1:-1]
 
-def t_x_m(Zt):
-    return Zt[1:-1, :-2]
-
-def t_y_m(Zt):
-    return Zt[:-2, 1:-1]
-
-def L(Zt):
-    Lx = 1/dx**2 * (t_x_p(Zt) - 2 * Zt[1:-1, 1:-1] + t_x_m(Zt))
-    Ly = 1/dy**2 * (t_y_p(Zt) - 2 * Zt[1:-1, 1:-1] + t_y_m(Zt))
-    return Lx + Ly
-
-def set_boundary_conditions(Z):
-    Z[:,0] = Z[:,1]
-    Z[:,-1] = Z[:,-2]
-    Z[0,:] = Z[1,:]
-    Z[-1,:] = Z[-2,:]
-    return Z
 
 def compute_wave_solution(Z0):
     Z0 = set_boundary_conditions(Z0)
